@@ -1,3 +1,6 @@
 [submodule "gtm"]
 	path = gtm
 	url = https://github.com/nasa/GTM_DesignSim.git
+[submodule "+aerootools"]
+	path = +aerootools
+	url = git@github.com:tcunis/aerootools.git

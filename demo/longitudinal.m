@@ -4,11 +4,11 @@
 %% About
 %
 % * Author:     Torbjoern Cunis
-% * Email:      <mailto:torbjoern.cunis@onera.fr>
+% * Email:      <mailto:tcunis.edu>
 % * Created:    2017-02-22
-% * Changed:    2018-05-18
+% * Changed:    2019-10-15
 %
-% This file is part of GTMpw -- Piece-wise polynomial model of the GTM
+% This file is part of GTMpw -- Piecewise polynomial model of the GTM
 % published under the GNU General Public License v3.
 %
 %% Variables, constants, and their units
@@ -23,90 +23,69 @@
 % * |Cm|       :  aerodynamic coefficient moment body y-axis,   -
 % * |qosc|     :  pitch rate, body y-axis,                      rad/s
 % * |qhat|     :  normalized pitch rate, body y-axis            rad
-% * |F|        :  thrust,                                       lbf
-% * |V|        :  airspeed,                                     ft/s
-% * |Vdot|     :  change in airspeed,                           ft/s^2
+% * |F|        :  thrust,                                       N
+% * |V|        :  airspeed,                                     m/s
+% * |Vdot|     :  change in airspeed,                           m/s^2
 %%
 
 
 %% Equations of motion
-% piece-wise model
-[C] = piecewise;
+% piecewise model
+pw = aero.GtmPiecewise;
 
-% phugoid motion
-[Vdot, gammadot, qhatdot, thetadot, qosc] = phugoid(C);
-
-% system description
+% system description longitudinal motion
 % with states X = [V gamma qhat alpha]^T, inputs U = [eta T]^T
-f = @(X, U) [
-                Vdot(X,U)
-            gammadot(X,U)
-             qhatdot(X,U)
-            thetadot(X,U) - gammadot(X,U)
-];
+sys = eom.GtmLong(pw);
 
-% find trim condition for eta = 0, T = 0
-opts = optimoptions('fsolve', 'Algorithm', 'Levenberg-marquardt');
-x0 = fsolve(@(x) f(x, [-deg2rad(1.5); 5]), [150; 0; 0; 0.1], opts)
+% find trim condition for eta = 0, T = 20 N
+import aerootools.findtrim
+x0 = findtrim(@sys.f, [35; 0; 0; 0.1], [0; 20]);
 
 % simulate elevator deflection by 5 degree
-[T, Xt] = ode45(@(~,x) f(x, [-deg2rad(1.5); 5]), [0 25], x0);
+[T, xt] = ode45(@(~,x) sys.f(x, [-deg2rad(5); 20]), [0 25], x0);
 
+% convert to state objects
+X0 = sys.X(x0);
+Xt = sys.X(xt);
 
 % plot system response
 figure(1)
 subplot(2,2,1)
-plot(T, Xt(:,1))
+plot(T, V(Xt))
 xlabel('time (s)')
 ylabel('airspeed (m/s)')
 
 subplot(2,2,2)
-plot(T, rad2deg(Xt(:,2)))
+plot(T, rad2deg(gamma(Xt)))
 xlabel('time (s)')
 ylabel('inclination (deg)')
 
 subplot(2,2,3)
-plot(T, rad2deg(qosc(Xt')))
+plot(T, rad2deg(q(Xt)))
 xlabel('time (s)')
-ylabel('pitch-rate (deg)')
+ylabel('pitch-rate (deg/s)')
 
 subplot(2,2,4)
-plot(T, rad2deg(Xt(:,4)))
+plot(T, rad2deg(alpha(Xt)))
 xlabel('time (s)')
 ylabel('angle of attack (deg)')
 
 
 %% Aerodynamic coefficients
 % polynomial sub-models and switching point
-[~, alpha0, ~, C1, C2] = piecewise;
 
 % plot lift coefficient over angle of attack
 figure(2)
 clf
-fplot(@(a) C.lift(deg2rad(a), 0, 0), [-5 70], '-')
+fplot(@(a) Clift(pw,deg2rad(a), 0, 0), [-5 70], '-')
 hold on
 % plot polynomial sub-models
-fplot(@(a) C1.lift(deg2rad(a), 0, 0), [-5 70], '--')
-fplot(@(a) C2.lift(deg2rad(a), 0, 0), [-5 70], '-.')
+fplot(@(a) Clift(pw.pre,deg2rad(a), 0, 0), [-5 70], '--')
+fplot(@(a) Clift(pw.post,deg2rad(a), 0, 0), [-5 70], '-.')
 % plot switching point
-plot(rad2deg(alpha0), C.lift(alpha0, 0, 0), 'k*')
+plot(rad2deg(pw.alpha0), Clift(pw,pw.alpha0, 0, 0), 'k*')
 set(gca, 'YLim', [-.5 1.5])
-legend('piece-wise', 'low angle', 'high angle', 'joint')
+legend('piecewise', 'low angle', 'high angle', 'joint')
 xlabel('angle of attack (deg)')
 ylabel('lift coefficient (-)')
 
-
-%% Partial derivatives
-% of the aerodynamic coefficients
-[~, ~, dC] = piecewise;
-
-% plot d(Cm)/d(eta) over angle of attack and elevator
-figure(3)
-clf
-fcontour(@(a,e) dC.m.deta(deg2rad(a),deg2rad(e),0), [0 60 -30 30], 'Fill', 'on')
-hold on
-colorbar
-% plot zero-derivative curve
-fcontour(@(a,e) dC.m.deta(deg2rad(a),deg2rad(e),0), [0 60 -30 30], 'r--', 'LevelList', 0)
-xlabel('angle of attack (deg)')
-ylabel('elevator deflection (deg)')

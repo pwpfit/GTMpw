@@ -4,28 +4,28 @@
 %% About
 %
 % * Author:     Torbjoern Cunis
-% * Email:      <mailto:torbjoern.cunis@onera.fr>
+% * Email:      <mailto:tcunis@umich.edu>
 % * Created:    2017-06-23
-% * Changed:    2017-06-23
+% * Changed:    2016-06-23
 %
-% This file is part of GTMpw -- Piece-wise polynomial model of the GTM
+% This file is part of GTMpw -- Piecewise polynomial model of the GTM
 % published under the GNU General Public License v3.
 %
 %% Variables, constants, and their units
 %
-% * |alpha|    :  angle of attack,                              rad
-% * |gamma|    :  flight-path angle,                            rad
 % * |rho|      :  air density,                                  slugs/ft^3
 % * |b|        :  reference aerodynamic span,                   ft
 % * |c|        :  reference (mean) aerodynamic coord,           ft
 % * |g|        :  gravitational constant,                       ft/s^2
-% * |Iy|       :  rotational inertia body y-axis                slugs-ft^2
-% * |l_t|      :  engine location, body z-axis,                 ft
+% * |I*|       :  rotational inertia body *-axis                slugs-ft^2
+% * |l_t|      :  engine vertical offset, body z-axis,          ft
 % * |m|        :  aircraft mass,                                slugs
 % * |S|        :  reference wing aera,                          ft^2
 % * |w|        :  aircraft weight,                              lbf
 % * |x_cg|     :  center of gravity, body x-axis,               ft
 % * |x_cgref|  :  reference center of gravity, body x-axis,     ft
+% * |y_cg|     :  center of gravity, body y-axis,               ft
+% * |y_cgref|  :  reference center of gravity, body y-axis,     ft
 % * |z_cg|     :  center of gravity, body z-axis,               ft
 % * |z_cgref|  :  reference center of gravity, body y-axis,     ft
 %%
@@ -47,7 +47,7 @@ z_cg    = GTM.cg_pos0(3);       z_cgref = GTM.ref_cg(3);
 l_t = eng_loc(3);
 
 rho = 0.002321756525427;                         % at GTM standard altitude
-g   = convacc(9.80665, 'm/s^2', 'ft/s^2');                %standard gravity
+g   = 32.17405;                %standard gravity (ft/s^2)
 
 m = w/g;
 
@@ -56,8 +56,8 @@ Iy = GTM.Inertia0(2);
 Iz = GTM.Inertia0(3);
 
 Ixz = GTM.Inertia0(4);
-Iyz = 0;
-Ixy = 0;
+Iyz = GTM.Inertia0(5);
+Ixy = GTM.Inertia0(6);
 
 
 %% Clear local variables
